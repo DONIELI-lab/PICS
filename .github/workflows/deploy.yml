@@ -25,11 +25,16 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
+          
       - name: Enable corepack for pnpm
         run: corepack enable pnpm
 
       - name: Install pnpm
         run: npm install -g pnpm
+      - name: Verify Environment
+        run: |
+          node -v
+          corepack --version
 
       - name: Install dependencies and build
         run: |
