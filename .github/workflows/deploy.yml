@@ -1,72 +1,58 @@
 name: Deploy to GitHub Pages
 
-   on:
-     push:
-       branches: [ main ]  # 或者您的主分支名称
-     pull_request:
-       branches: [ main ]  # 用于PR预览
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-   # 允许从fork的仓库中运行此工作流，同时保留写访问权限
-   permissions:
-     contents: write
-     pages: write
-     id-token: write
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
-   # 环境配置
-   environment:
-     name: github-pages
-     url: ${{ steps.deployment.outputs.page_url }}
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-   jobs:
-     build-and-deploy:
-       runs-on: ubuntu-latest
-       steps:
-         # 检出代码
-         - name: Checkout
-           uses: actions/checkout@v4
-           with:
-             fetch-depth: 0  # 获取完整的提交历史
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
 
-         # 设置 Node.js 环境
-         - name: Setup Node.js
-           uses: actions/setup-node@v4
-           with:
-             node-version: '18'  # 使用 Node.js 18
-             cache: 'pnpm'       # 缓存 pnpm 依赖
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
 
-         # 安装 pnpm
-         - name: Install pnpm
-           uses: pnpm/action-setup@v2
-           with:
-             version: latest  # 使用最新版本的 pnpm
+      - name: Install dependencies and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
 
-         # 安装依赖并构建项目
-         - name: Install dependencies and build
-           run: |
-             pnpm install --frozen-lockfile  # 确保依赖版本一致
-             pnpm build                      # 构建项目
+      - name: Verify build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "构建失败：dist 目录不存在"
+            exit 1
+          fi
+          echo "构建成功，dist 目录包含 $(ls -la dist | wc -l) 个文件"
 
-         # 可选：构建结果检查
-         - name: Verify build output
-           run: |
-             if [ ! -d "dist" ]; then
-               echo "构建失败：dist 目录不存在"
-               exit 1
-             fi
-             echo "构建成功，dist 目录包含 $(ls -la dist | wc -l) 个文件"
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          commit-message: 'Deploying to GitHub Pages'
+          clean: true
+          single-commit: true
 
-         # 部署到 GitHub Pages
-         - name: Deploy to GitHub Pages
-           uses: JamesIves/github-pages-deploy-action@v4
-           with:
-             folder: dist            # 构建输出目录
-             branch: gh-pages        # 部署到的分支
-             commit-message: 'Deploying to GitHub Pages'  # 自定义提交消息
-             clean: true             # 清理目标分支上的旧文件
-             single-commit: true     # 只创建一个提交
-
-         # 输出部署状态
-         - name: Output deployment status
-           if: success()
-           run: echo "✅ 部署成功！访问地址: ${{ steps.deployment.outputs.page_url }}"
-   ```
+      - name: Output deployment status
+        if: success()
+        run: echo "✅ 部署成功！"
