@@ -25,6 +25,8 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
+      - name: Enable corepack for pnpm
+        run: corepack enable pnpm
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
